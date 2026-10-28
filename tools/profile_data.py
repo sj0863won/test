@@ -16,13 +16,15 @@ import argparse
 import csv
 import io
 import json
+import math
 import os
 import re
 import sys
 import time
 from collections import Counter, defaultdict
 
-SKIP_DIRS = {'.git', 'test', 'harness', 'notes', 'node_modules', '__pycache__', '.venv', 'venv', '.idea', '.vscode'}
+SKIP_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.idea', '.vscode'}
+ROOT_SKIP = {'test', 'harness', 'notes', 'output', 'outputs'}   # top level only: the harness itself, notes and results (data/test/ etc. are still read)
 TABLE_EXT = {'.csv', '.tsv'}
 JSON_EXT = {'.json', '.jsonl', '.ndjson'}
 TEXT_EXT = {'.txt', '.md', '.log', '.eml', '.yaml', '.yml', '.ini', '.cfg', '.toml', '.sql', '.xml', '.html', '.htm'}
@@ -130,6 +132,7 @@ class Col:
         self.shape_ex = {}
         self.lens = 0
         self.nested = 0
+        self.nonfinite = Counter()
 
     def add(self, raw):
         self.n += 1
@@ -153,9 +156,13 @@ class Col:
             self.values[s] += 1
         else:
             self.capped = True
-        if NUM_RE.match(s):
+        fv = float(s) if NUM_RE.match(s) else None
+        if fv is not None and not math.isfinite(fv):
+            self.nonfinite[s] += 1          # e.g. 1e309 -> inf: report it, never use it in number stats
+            fv = None
+        if fv is not None:
             if len(self.num) < 300000:
-                self.num.append(float(s))
+                self.num.append(fv)
         else:
             if NUM_COMMA_RE.match(s):
                 self.comma_num += 1
@@ -265,6 +272,8 @@ class Col:
             variants = [sorted(g) for g in groups.values() if len(g) > 1]
             if variants:
                 flags.append('대소문자·공백·구분자만 다른 값 %d묶음 (예: %s)' % (len(variants), ' | '.join('/'.join(short(x, 14) for x in g[:3]) for g in variants[:3])))
+        if self.nonfinite:
+            flags.append('표현 범위를 넘는 숫자 %d (예: %s) ← 입력 오류 확인' % (sum(self.nonfinite.values()), ', '.join(short(x, 12) for x in self.nonfinite)[:40]))
         if self.comma_num:
             flags.append('천 단위 쉼표 숫자 %d' % self.comma_num)
         if self.unit_num:
@@ -358,24 +367,27 @@ def read_json(path, ext, max_rows):
 
 
 def read_xlsx(path, max_rows):
+    """Return one (sheet_name, info, header, rows) per sheet. Every sheet is profiled, not only the first."""
     try:
         import openpyxl  # noqa
     except ImportError:
-        return {'error': 'openpyxl 없음 - xlsx는 직접 확인'}, [], []
+        return [('', {'error': 'openpyxl 없음 - xlsx는 직접 확인'}, [], [])]
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    ws = wb[wb.sheetnames[0]]
-    it = ws.iter_rows(values_only=True)
-    try:
-        header = [str(h) if h is not None else 'col%d' % (i + 1) for i, h in enumerate(next(it))]
-    except StopIteration:
-        return {'sheets': wb.sheetnames}, [], []
-    rows = []
-    total = 0
-    for r in it:
-        total += 1
-        if len(rows) < max_rows:
-            rows.append(['' if x is None else x for x in r])
-    return {'sheets': wb.sheetnames, 'rows_total': total, 'encoding': 'xlsx'}, header, rows
+    out = []
+    for name in wb.sheetnames:
+        it = wb[name].iter_rows(values_only=True)
+        try:
+            header = [str(h) if h is not None else 'col%d' % (i + 1) for i, h in enumerate(next(it))]
+        except StopIteration:
+            out.append((name, {'error': '빈 시트', 'sheets': wb.sheetnames}, [], []))
+            continue
+        rows, total = [], 0
+        for r in it:
+            total += 1
+            if len(rows) < max_rows:
+                rows.append(['' if x is None else x for x in r])
+        out.append((name, {'sheets': wb.sheetnames, 'rows_total': total, 'encoding': 'xlsx'}, header, rows))
+    return out
 
 
 def profile_text(path):
@@ -414,10 +426,8 @@ def main():
     root = os.path.abspath(a.folder)
     files = []
     for d, dirs, fs in os.walk(root):
-        dirs[:] = sorted(x for x in dirs if x not in SKIP_DIRS and not x.startswith('.'))
-        rel_d = os.path.relpath(d, root)
-        if rel_d.split(os.sep)[0] in ('output', 'outputs') and rel_d != '.':
-            continue
+        dirs[:] = sorted(x for x in dirs if x not in SKIP_DIRS and not x.startswith('.')
+                         and not (d == root and x in ROOT_SKIP))
         for f in sorted(fs):
             if f.startswith('.'):
                 continue
@@ -511,15 +521,17 @@ def main():
         try:
             if ext in TABLE_EXT or ext in JSON_EXT or ext in ('.xlsx', '.xlsm'):
                 if ext in TABLE_EXT:
-                    info, header, rows = read_table(p, ext, a.max_rows)
+                    parts = [('',) + read_table(p, ext, a.max_rows)]
                 elif ext in JSON_EXT:
-                    info, header, rows = read_json(p, ext, a.max_rows)
+                    parts = [('',) + read_json(p, ext, a.max_rows)]
                 else:
-                    info, header, rows = read_xlsx(p, a.max_rows)
-                if not header:
-                    docs.append((rel, size, info, None))
-                    continue
-                register(rel, size, info, header, rows)
+                    parts = read_xlsx(p, a.max_rows)
+                for sheet, info, header, rows in parts:
+                    name = '%s[%s]' % (rel, sheet) if sheet else rel
+                    if not header:
+                        docs.append((name, size, info, None))
+                        continue
+                    register(name, size, info, header, rows)
             elif ext in TEXT_EXT or (size < 2_000_000 and ext in ('', '.dat', '.out')):
                 docs.append((rel, size, None, profile_text(p)))
             else:
@@ -634,7 +646,7 @@ def main():
             side = '왼쪽' if na <= nb else '오른쪽'
             if small_only and len(small_only) <= max(3, 0.2 * min(na, nb)):
                 line += ' · %s에만 있는 값 %d: %s' % (side, len(small_only), ', '.join(short(x, 20) for x in small_only[:5]))
-            if small_only and len(small_only) <= max(3, 0.2 * min(na, nb)) and min(na, nb) > 20:
+            if small_only and len(small_only) <= max(3, 0.2 * min(na, nb)) and min(na, nb) >= 5:
                 hot.append('%s.%s 값 중 %d개가 %s.%s에 없음 (예: %s)' % (
                     (A if na <= nb else B)[0], (A if na <= nb else B)[1], len(small_only),
                     (B if na <= nb else A)[0], (B if na <= nb else A)[1], ', '.join(short(x, 20) for x in small_only[:3])))
@@ -659,7 +671,10 @@ def main():
         w('| 열 | 채움 | 고유 | 종류 | 요약 | 주의 |')
         w('|---|---|---|---|---|---|')
         for c in cols:
-            k, summ, flags = c.summary_and_flags()
+            try:
+                k, summ, flags = c.summary_and_flags()
+            except Exception as e:  # one odd column must not stop the whole report
+                k, summ, flags = '?', '', ['요약 실패: %s' % e]
             fill = '%d%%' % round(100 * c.filled / max(c.n, 1))
             if c.empty:
                 fill += ' (빈 %d)' % c.empty
