@@ -346,15 +346,20 @@ def read_json(path, ext, max_rows):
         if isinstance(o, dict):
             lists = [(k, v) for k, v in o.items() if isinstance(v, list) and v and isinstance(v[0], dict)]
             info['top_keys'] = list(o.keys())[:15]
-            if lists:
-                k, v = max(lists, key=lambda kv: len(kv[1]))
-                info['records_key'] = k
-                o = v
-            else:
-                return info, [], []
+            if not lists:
+                return [('', info, [], [])]
+            parts = []                       # every record array is profiled (e.g. "rules" and "events")
+            for k, v in lists:
+                pinfo = dict(info, records_key=k, rows_total=len(v))
+                parts.append((k,) + _records_table(pinfo, [x if isinstance(x, dict) else {'value': x} for x in v[:max_rows]]))
+            return parts
         if isinstance(o, list):
             recs = [x if isinstance(x, dict) else {'value': x} for x in o[:max_rows]]
             info['rows_total'] = len(o)
+    return [('',) + _records_table(info, recs)]
+
+
+def _records_table(info, recs):
     header = []
     seen = set()
     for r in recs[:5000]:
@@ -523,7 +528,7 @@ def main():
                 if ext in TABLE_EXT:
                     parts = [('',) + read_table(p, ext, a.max_rows)]
                 elif ext in JSON_EXT:
-                    parts = [('',) + read_json(p, ext, a.max_rows)]
+                    parts = read_json(p, ext, a.max_rows)
                 else:
                     parts = read_xlsx(p, a.max_rows)
                 for sheet, info, header, rows in parts:
@@ -629,7 +634,11 @@ def main():
         else:
             w('- `%s` — 표로 읽지 못함 %s' % (rel, info.get('error', '') if info else ''))
     for o in others:
-        w('- 기타 `%s` — %s bytes%s' % (o[0], format(o[1], ','), (' · ' + o[2]) if len(o) > 2 else ''))
+        w('- 기타 `%s` — %s bytes%s · **내용 미확인**' % (o[0], format(o[1], ','), (' · ' + o[2]) if len(o) > 2 else ''))
+        hot.append('%s: 이 도구가 내용을 읽지 못함 → 직접 열어 확인' % o[0])
+    for rel, size, info, tx in docs:
+        if tx is None:
+            hot.append('%s: 표로 읽지 못함(%s) → 직접 확인' % (rel, (info or {}).get('error', '형식 확인 필요')))
     w('')
 
     w('## 파일 간 연결 후보 (같은 값이 들어 있는 열)')
@@ -681,7 +690,7 @@ def main():
             uniq = ('%d+' % len(c.values)) if c.capped else str(len(c.values))
             w('| %s | %s | %s | %s | %s | %s |' % (short(c.name, 24), fill, uniq, k, short(summ, 110), '; '.join(flags)))
             for fl in flags:
-                if any(t in fl for t in ('형식이 튀는', '표기 혼재', '대소문자', '숫자 아닌', '날짜 형식', '시간대', '단위가 붙은', '천 단위', '빈 값 표기')):
+                if any(t in fl for t in ('표현 범위', '형식이 튀는', '표기 혼재', '대소문자', '숫자 아닌', '날짜 형식', '시간대', '단위가 붙은', '천 단위', '빈 값 표기')):
                     hot.append('%s.%s: %s' % (rel, c.name, fl))
             if MEMO_COL.search(c.name) and k in ('category', 'text', 'id'):
                 vals = [v for v, _ in c.values.most_common(8)]
