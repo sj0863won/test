@@ -342,7 +342,7 @@ def read_json(path, ext, max_rows):
                 o = json.load(fh)
             except ValueError as e:
                 info['error'] = 'JSON 파싱 실패: %s' % e
-                return info, [], []
+                return [('', info, [], [])]
         if isinstance(o, dict):
             lists = [(k, v) for k, v in o.items() if isinstance(v, list) and v and isinstance(v[0], dict)]
             info['top_keys'] = list(o.keys())[:15]
