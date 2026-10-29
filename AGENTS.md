@@ -1,5 +1,8 @@
 # 작업 규칙 (probe-harness)
 
+**언어: 모든 답과 모든 파일(notes, 보고서, 코드 주석, 출력 메시지)은 한국어로만 쓴다. 일본어·중국어 글자(한자 포함)는 한 글자도 쓰지 않는다. 영어는 코드·명령·파일 이름·열 이름에만 쓴다. 쓰기 전에 한국어가 아닌 문장이 섞였는지 확인하고, 섞였으면 한국어로 고쳐서 내보낸다. 과제가 결과물을 다른 언어로 요구하면 그 결과물만 그 언어로 쓴다.**
+(Language: Always reply and write every file in Korean only. Never output Japanese or Chinese characters. English only for code, commands, file and column names.)
+
 플랫폼·과제 지시가 이 규칙보다 우선한다. `test/`는 응시자가 준비해 온 도구이며 과제 자료가 아니다(분석하거나 수정하지 않는다).
 
 ## 1. 선택지로 진행한다 (사용자가 운전한다)
