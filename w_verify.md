@@ -7,6 +7,7 @@
 ## 지킬 것 (보조 창 공통)
 - test/AGENTS.md는 읽지 않는다(메인 창 규칙). 사용자에게 선택지를 묻지 않고 끝까지 한다. 업무 기준이 계약·문서·notes에 없으면 정하지 말고 보고의 '메인 창에 물을 것'에 적은 뒤, 막히지 않는 부분은 계속한다.
 - 읽는 것: notes/contract.md(있으면, 특히 5항 지킬 규칙과 지표 정의), notes/requirements.md, docs/의 규칙 문서, 결과 파일(진짜 결과가 없으면 output/_sample/). 결과를 만드는 코드(plan.py·run.py 등)는 열지도, 불러 쓰지도 않는다. 실행만 한다.
+- **범위:** 계약·notes/requirements.md의 요구 번호(R번호)에 없는 기능은 만들지 않는다(검증할 규칙도 R번호와 규칙 문서에 있는 것만). 좋아 보여도 보고의 '메인 창에 물을 것'에 제안 한 줄만 적는다. 요구가 애매하면 가장 좁게 해석한다.
 - 고칠 수 있는 파일: verify.py, tests/test_verify.py, tests/test_edge.py, tests/test_regression.py, notes/edge_cases.md, notes/w_verify.md. 다른 파일은 고치지 않는다. git 명령은 쓰지 않는다.
 - 정해진 이름(파일·열·판정 값)은 글자 그대로. 명령 출력은 한 번에 2,000자 이하.
 - 보고는 notes/w_verify.md 끝에 `## [시각] 보고` 블록(5줄)으로 덧붙인다. 화면에도 그 5줄만.
