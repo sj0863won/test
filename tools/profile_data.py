@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generic data profiler for an unfamiliar task folder (Python standard library only).
 
-Usage:  python test/tools/profile_data.py [folder=.] [--out notes/profile.md] [--max-rows 200000]
+Usage:  python test/tools/profile_data.py [folder=.] [--out user/notes/profile.md] [--max-rows 200000]
 
 Reads files only (never modifies them) and writes a short Markdown summary:
   - tables (csv/tsv/json/jsonl/xlsx): rows, columns, fill rate, value types, ranges,
@@ -24,7 +24,7 @@ import time
 from collections import Counter, defaultdict
 
 SKIP_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.idea', '.vscode'}
-ROOT_SKIP = {'test', 'harness', 'notes', 'output', 'outputs'}   # top level only: the harness itself, notes and results (data/test/ etc. are still read)
+ROOT_SKIP = {'test', 'harness', 'notes', 'user', 'output', 'outputs'}   # top level only: the harness itself, notes and results (data/test/ etc. are still read)
 TABLE_EXT = {'.csv', '.tsv'}
 JSON_EXT = {'.json', '.jsonl', '.ndjson'}
 TEXT_EXT = {'.txt', '.md', '.log', '.eml', '.yaml', '.yml', '.ini', '.cfg', '.toml', '.sql', '.xml', '.html', '.htm'}
