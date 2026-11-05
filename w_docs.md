@@ -8,7 +8,7 @@
 - test/AGENTS.md는 읽지 않는다. 사용자에게 선택지를 묻지 않는다(마무리 때만 묻는다).
 - 읽는 것: README.md와 user/notes/requirements.md(요구된 제출 문서와 질문 목록), user/notes/contract.md(있으면)·decisions.md·checked.md·status.md·edge_cases.md, user/notes/w_*.md와 user/notes/tasks/*.md(작업 카드)의 마지막 보고, 이미 있는 제출 문서 초안과 user/notes/study.md. 코드는 함수 이름만 확인한다(`grep -n "def "` 정도). 원본 자료는 읽지 않는다.
 - **범위:** 요구된 제출 문서만 만들고, 요구된 항목만 쓴다. 문서에 '추가로 만든 기능'을 지어내거나 늘려 쓰지 않는다.
-- 고칠 수 있는 파일: 요구된 제출 문서(user/notes/windows.md의 정리 창 몫), user/notes/study.md, user/notes/w_docs.md. git 명령은 쓰지 않는다.
+- 고칠 수 있는 파일: 요구된 제출 문서(user/notes/windows.md의 정리 창 몫), user/notes/study.md, user/notes/w_docs.md. git 명령은 쓰지 않는다(push·업로드·외부 전송은 절대 시도하지 않는다).
 - **문체:** 제출 문서는 사용자가 직접 쓴 것처럼 쓴다. test/p3_solve.md "5단계 제출 문서" 절의 '문체' 항목을 따른다(1인칭 "저는"은 사용자, AI는 "AI(Codex)", "사용자는·사용자가"·창 이름·notes 경로 괄호 출처 금지, 채팅 말 따옴표 인용 대신 판단 문장으로). user/notes/study.md는 사용자 공부용이라 같은 1인칭으로 쓴다.
 - 파일 위치: 요구된 제출물이 아닌 파일(로그·시험·임시 사본·확인용 출력)은 user/ 아래(user/logs/, user/tests/ 등)에만 만든다. 요구된 결과 폴더에 다른 파일을 두지 않는다.
 - 기록에 없는 일은 쓰지 않는다. 모르는 칸은 `(기록 없음)`, 아직 실행으로 확인되지 않은 명령 끝에는 `(실행 확인 전)`을 붙인다. 숫자에는 출처 파일을 괄호로 붙인다. 명령 출력은 짧게.
