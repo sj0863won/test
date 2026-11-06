@@ -22,7 +22,7 @@ user/notes/contract.md를 쓴다. 맨 위 한 줄은 `계약 v1 (시각)`. 과�
    - 메인: 결과를 만드는 코드(plan.py 등)·output/·notes(requirements·decisions·checked·status·contract·windows·handoff)·git 커밋
    - 웹(화면이 있을 때): app.py(또는 web/)·user/tests/test_web.py·user/notes/w_web.md
    - 검증: user/verify.py·user/tests/test_verify.py·user/tests/test_edge.py·user/tests/test_regression.py·user/notes/edge_cases.md·user/notes/w_verify.md
-   - 정리: 과제가 요구한 제출 문서(보고서·실행 문서·AI 협업 기록)·user/notes/study.md·user/notes/w_docs.md
+   - 정리: 과제가 요구한 제출 문서(보고서·실행 문서·AI 협업 기록)·user/notes/w_docs.md
 
 계약을 다 쓰면 커밋하고 test/split.md 1~4절로 지금 열 창을 정해 안내한다. p1 진행 결정의 창 구성(웹·검증·정리)이 기본이고, 이미 열린 창은 다시 열지 않으며, 그 밖에 동시에 할 일이 있으면 작업 카드로 더한다. 정리 창은 단계가 끝날 때마다 `/new` 후 다시 실행한다고 함께 알린다.
 
