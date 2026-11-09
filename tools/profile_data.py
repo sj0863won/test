@@ -455,6 +455,31 @@ def main():
             for i, c in enumerate(cols):
                 c.add(r[i] if i < len(r) else None)
         dup_rows = sum(c - 1 for c in dup.values() if c > 1)
+        # same entity + small index (e.g. wafer_id + site_id) seen more than once -> re-measurement / update suspicion
+        pair_dups = []
+        try:
+            ids = [i for i, c in enumerate(cols) if c.name != '_file' and c.kind() == 'id'
+                   and IDISH_COL.search(c.name) and any(k > 1 for k in c.values.values())][:3]
+            idx = []
+            for i, c in enumerate(cols):
+                if c.name == '_file' or i in ids or c.capped or not (2 <= len(c.values) <= 100):
+                    continue
+                kd = c.kind()
+                if kd == 'category' or (kd == 'number' and all(re.fullmatch(r'-?\d+', v) for v in c.values)):
+                    idx.append(i)
+            for i in ids:
+                for j in idx[:6]:
+                    grp = defaultdict(set)   # (entity, index) -> distinct full rows (identical copies are reported separately)
+                    for r in rows:
+                        grp[(str(r[i]) if i < len(r) else '', str(r[j]) if j < len(r) else '')].add(tuple(str(x) for x in r))
+                    rep = sum(len(v) - 1 for v in grp.values() if len(v) > 1)
+                    if rep and len(grp) >= 0.9 * len(rows) - dup_rows:
+                        ex = [k for k, v in grp.items() if len(v) > 1][:2]
+                        pair_dups.append((cols[i].name, cols[j].name, rep, ex))
+                        break
+        except Exception:
+            pair_dups = []
+        info['pair_dups'] = pair_dups
         tables.append((rel, size, info, header, cols, dup_rows, len(rows)))
         for c in cols:
             if c.name == '_file':
@@ -698,6 +723,10 @@ def main():
                     w('| ↳ %s 값 | | | | %s | 비고·메모는 전부 읽어 볼 것 |' % (short(c.name, 20), short(' / '.join(vals), 200)))
         if dup_rows:
             w('- 완전 중복 행 %d개' % dup_rows)
+        for a_, b_, rep, ex in info.get('pair_dups', [])[:3]:
+            w('- `%s`+`%s` 조합이 2번 이상 나오는 행 %d개 (예: %s) ← 같은 대상을 다시 잰 기록(재측정·갱신)인지, 어느 것을 쓸지 확인' % (
+                a_, b_, rep, ', '.join('%s/%s' % (short(x, 16), short(y, 8)) for x, y in ex)))
+            hot.append('%s: `%s`+`%s` 같은 조합이 %d번 더 나옴 (재측정·갱신 의심)' % (rel, a_, b_, rep))
         idc = [c for c in cols if c.kind() in ('id', 'number') and IDISH_COL.search(c.name)]
         for c in idc[:3]:
             rep = [(v, k) for v, k in c.values.items() if k > 1]
